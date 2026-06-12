@@ -1,15 +1,18 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Zap, Shield, Palette, Gauge, Globe, Blocks } from "lucide-react";
+import { Zap, Shield, Palette, Gauge, Globe, Blocks, Terminal } from "lucide-react";
+import Link from "next/link";
 
 const features = [
   {
-    icon: Zap,
-    title: "极致性能",
-    description: "服务端渲染 + 流式传输，首屏加载快如闪电。",
-    gradient: "from-yellow-500/20 to-orange-500/20",
-    iconColor: "text-yellow-500",
+    icon: Terminal,
+    title: "固件刷写",
+    description: "通过浏览器直接为 ESP32 刷写固件，无需安装工具。",
+    gradient: "from-blue-500/20 to-cyan-500/20",
+    iconColor: "text-blue-500",
+    isLink: true,
+    href: "/firmware",
   },
   {
     icon: Shield,
@@ -99,23 +102,40 @@ export default function Features() {
               key={feature.title}
               variants={cardVariants}
               whileHover={{ y: -8, transition: { duration: 0.3 } }}
-              className="group relative rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm p-8 hover:border-border hover:shadow-xl transition-all duration-300"
+              className={`group relative rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm p-8 hover:border-border hover:shadow-xl transition-all duration-300 ${feature.isLink ? 'cursor-pointer' : ''}`}
             >
               {/* Glow effect on hover */}
               <div
                 className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 blur-xl`}
               />
 
-              <div
-                className={`inline-flex items-center justify-center size-12 rounded-xl bg-gradient-to-br ${feature.gradient} mb-6`}
-              >
-                <feature.icon className={`size-6 ${feature.iconColor}`} />
-              </div>
+              {feature.isLink ? (
+                <Link href={feature.href} className="block">
+                  <div
+                    className={`inline-flex items-center justify-center size-12 rounded-xl bg-gradient-to-br ${feature.gradient} mb-6`}
+                  >
+                    <feature.icon className={`size-6 ${feature.iconColor}`} />
+                  </div>
 
-              <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                {feature.description}
-              </p>
+                  <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {feature.description}
+                  </p>
+                </Link>
+              ) : (
+                <>
+                  <div
+                    className={`inline-flex items-center justify-center size-12 rounded-xl bg-gradient-to-br ${feature.gradient} mb-6`}
+                  >
+                    <feature.icon className={`size-6 ${feature.iconColor}`} />
+                  </div>
+
+                  <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {feature.description}
+                  </p>
+                </>
+              )}
             </motion.div>
           ))}
         </motion.div>
