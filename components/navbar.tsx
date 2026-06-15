@@ -52,7 +52,9 @@ export default function Navbar() {
               {link.label}
             </a>
           ))}
-          <Button size="sm">开始使用</Button>
+          <Button size="sm" asChild>
+            <a href="/login">开始使用</a>
+          </Button>
         </div>
 
         {/* Mobile toggle */}
@@ -85,8 +87,8 @@ export default function Navbar() {
                   {link.label}
                 </a>
               ))}
-              <Button size="sm" className="w-fit">
-                开始使用
+              <Button size="sm" className="w-fit" asChild>
+                <a href="/login">开始使用</a>
               </Button>
             </div>
           </motion.div>
