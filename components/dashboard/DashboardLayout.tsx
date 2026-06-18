@@ -12,7 +12,8 @@ import {
   Bell,
   Search,
   ChevronDown,
-  Zap
+  Zap,
+  MessageCircle
 } from "lucide-react";
 import UserProfileCard from "./UserProfileCard";
 import { getAvatarUrl } from "@/lib/api/config";
@@ -29,6 +30,7 @@ const navItems = [
   { icon: LayoutDashboard, label: "仪表盘", href: "/dashboard", active: true },
   { icon: Cpu, label: "设备管理", href: "/dashboard/devices", active: false },
   { icon: Zap, label: "便捷操作", href: "/dashboard/operations", active: false },
+  { icon: MessageCircle, label: "AI Agent", href: "/dashboard/ai-agent", active: false },
   { icon: Settings, label: "系统设置", href: "/dashboard/settings", active: false },
 ];
 
@@ -112,8 +114,8 @@ export default function DashboardLayout({ children, username, avatarFilename, up
                   </span>
                 </div>
               )}
-              <div className="hidden sm:block text-left">
-                <p className="text-sm font-medium leading-none">{username}</p>
+              <div className="hidden sm:block text-left min-w-[120px]">
+                <p className="text-sm font-medium leading-none truncate">{username}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">在线</p>
               </div>
               <ChevronDown className="size-4 text-muted-foreground hidden sm:block" />
@@ -125,7 +127,7 @@ export default function DashboardLayout({ children, username, avatarFilename, up
       {/* Sidebar */}
       <aside
         className={`fixed top-16 left-0 bottom-0 bg-card/80 backdrop-blur-xl border-r border-border/50 z-40 transition-all duration-300 ${
-          sidebarOpen ? "w-64" : "w-0 sm:w-16"
+          sidebarOpen ? "w-64" : "w-0 sm:w-20"
         }`}
       >
         <nav className="p-4 space-y-2">
@@ -139,9 +141,9 @@ export default function DashboardLayout({ children, username, avatarFilename, up
                   isActive
                     ? "bg-primary/10 text-primary"
                     : "hover:bg-accent text-muted-foreground hover:text-foreground"
-                }`}
+                } ${sidebarOpen ? "" : "sm:px-2 sm:justify-center"}`}
               >
-                <item.icon className="size-5 shrink-0" />
+                <item.icon className={"size-5 shrink-0 " + (sidebarOpen ? "" : "sm:mx-auto")} />
                 <span className={`text-sm font-medium ${sidebarOpen ? "" : "hidden sm:block"}`}>
                   {item.label}
                 </span>

@@ -273,6 +273,7 @@ export default function OperationsPanel() {
             )}
           </div>
         </motion.div>
+
       </div>
     </motion.div>
   );

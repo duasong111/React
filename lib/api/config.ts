@@ -42,6 +42,8 @@ export const API_ENDPOINTS = {
   operations: {
     addLicense: ['external', '/api/add_license/'] as const,
     batchDeploy: ['external', '/api/batch_deploy/'] as const,
+    frpUptime: ['external', '/api/device_uptime/'] as const,
+    frpConfig: ['external', '/api/frp_config_update/'] as const,
   },
 } as const;
 

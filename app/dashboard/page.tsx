@@ -57,6 +57,10 @@ export default function DashboardPage() {
   const [recentDevices, setRecentDevices] = useState<Device[]>([]);
   const [contributions, setContributions] = useState<ContributionDay[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
 
   useEffect(() => {
     const user = localStorage.getItem("username") || "User";
@@ -86,8 +90,11 @@ export default function DashboardPage() {
           setRecentDevices(devices.slice(0, 5));
         }
 
-        // Fetch user contributions
-        const contribResult = await http.post(API_ENDPOINTS.users.contributions, { username });
+        // Fetch user contributions with selected month
+        const contribResult = await http.post(API_ENDPOINTS.users.contributions, {
+          username,
+          month: selectedMonth,
+        });
         if (contribResult.success && contribResult.data) {
           const contribData = (contribResult.data as any);
           setContributions(contribData?.data?.contributions || []);
@@ -102,7 +109,25 @@ export default function DashboardPage() {
     if (username) {
       fetchData();
     }
-  }, [username]);
+  }, [username, selectedMonth]);
+
+  const handlePrevMonth = () => {
+    const [year, month] = selectedMonth.split("-").map(Number);
+    const date = new Date(year, month - 2, 1);
+    setSelectedMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`);
+  };
+
+  const handleNextMonth = () => {
+    const [year, month] = selectedMonth.split("-").map(Number);
+    const date = new Date(year, month, 1);
+    setSelectedMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`);
+  };
+
+  const formatMonthLabel = (month: string) => {
+    const [year, m] = month.split("-");
+    const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+    return `${year}年${monthNames[parseInt(m) - 1]}`;
+  };
 
   // GitHub-style contribution graph
   const getContributionColor = (count: number, max: number) => {
@@ -281,16 +306,34 @@ export default function DashboardPage() {
           </div>
 
           {/* Legend */}
-          <div className="flex items-center gap-2 mt-4 text-xs text-muted-foreground">
-            <span>少</span>
-            <div className="flex gap-1">
-              <div className="size-3 rounded-sm bg-accent/30" />
-              <div className="size-3 rounded-sm bg-green-200 dark:bg-green-800" />
-              <div className="size-3 rounded-sm bg-green-300 dark:bg-green-700" />
-              <div className="size-3 rounded-sm bg-green-400 dark:bg-green-600" />
-              <div className="size-3 rounded-sm bg-green-500 dark:bg-green-500" />
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>少</span>
+              <div className="flex gap-1">
+                <div className="size-3 rounded-sm bg-accent/30" />
+                <div className="size-3 rounded-sm bg-green-200 dark:bg-green-800" />
+                <div className="size-3 rounded-sm bg-green-300 dark:bg-green-700" />
+                <div className="size-3 rounded-sm bg-green-400 dark:bg-green-600" />
+                <div className="size-3 rounded-sm bg-green-500 dark:bg-green-500" />
+              </div>
+              <span>多</span>
             </div>
-            <span>多</span>
+            {/* Month Selector */}
+            <div className="flex items-center gap-1 text-xs">
+              <button
+                onClick={handlePrevMonth}
+                className="px-2 py-1 rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                &lt;
+              </button>
+              <span className="px-3 py-1 font-medium">{formatMonthLabel(selectedMonth)}</span>
+              <button
+                onClick={handleNextMonth}
+                className="px-2 py-1 rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                &gt;
+              </button>
+            </div>
           </div>
         </motion.div>
 
