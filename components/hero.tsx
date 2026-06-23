@@ -43,11 +43,11 @@ export default function Hero() {
               className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.1]"
             >
               <span className="bg-gradient-to-br from-foreground via-foreground/80 to-foreground/40 bg-clip-text text-transparent">
-                构建未来的
+                全设备无缝衔接
               </span>
               <br />
               <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/50 bg-clip-text text-transparent">
-                数字体验
+                问题无处可藏
               </span>
             </motion.h1>
 

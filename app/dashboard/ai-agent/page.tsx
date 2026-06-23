@@ -3,7 +3,8 @@
 import { useEffect, useState, useRef } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { motion } from "framer-motion";
-import { Bot, User, Send, Loader2, MessageCircle, RefreshCw } from "lucide-react";
+import { Bot, User, Send, Loader2, MessageCircle, RefreshCw, AlertCircle } from "lucide-react";
+import { io, Socket } from "socket.io-client";
 
 interface ChatMessage {
   id: string;
@@ -11,6 +12,8 @@ interface ChatMessage {
   content: string;
   timestamp: Date;
 }
+
+const DAILY_LIMIT = 10;
 
 export default function AIAgentPage() {
   const [username, setUsername] = useState<string>("");
@@ -22,7 +25,9 @@ export default function AIAgentPage() {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
+  const [dailyUsage, setDailyUsage] = useState<number | null>(null);
+  const [limitExceeded, setLimitExceeded] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,11 +42,76 @@ export default function AIAgentPage() {
   }, []);
 
   useEffect(() => {
-    connectWebSocket();
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
+    // Connect to Flask WebSocket
+    const apiUrl = window.location.protocol === 'https:'
+      ? 'https://' + window.location.host
+      : 'http://' + window.location.host;
+
+    const socket = io(apiUrl, {
+      path: '/socket.io/',
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+    });
+
+    socket.on('connect', () => {
+      console.log("WebSocket connected");
+      setWsConnected(true);
+    });
+
+    socket.on('disconnect', () => {
+      console.log("WebSocket disconnected");
+      setWsConnected(false);
+    });
+
+    socket.on('connected', (data: any) => {
+      // Welcome message from server
+      const welcomeMsg: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'system',
+        content: data.message || '你好！我是 AI Agent，有什么我可以帮助你的吗？',
+        timestamp: new Date(),
+      };
+      setMessages([welcomeMsg]);
+    });
+
+    socket.on('ai_response', (data: any) => {
+      if (data.success) {
+        // Update daily usage
+        if (data.daily_usage !== undefined) {
+          setDailyUsage(data.daily_usage);
+          const remaining = DAILY_LIMIT - data.daily_usage;
+          setLimitExceeded(remaining <= 0);
+        }
+
+        const responseMsg: ChatMessage = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          type: 'assistant',
+          content: data.message || '',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, responseMsg]);
+      } else {
+        // Error message
+        if (data.message && data.message.includes('次数已用完')) {
+          setLimitExceeded(true);
+        }
+
+        const errorMsg: ChatMessage = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          type: 'error',
+          content: data.message || '请求失败',
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMsg]);
       }
+      setIsLoading(false);
+    });
+
+    socketRef.current = socket;
+
+    return () => {
+      socket.disconnect();
     };
   }, []);
 
@@ -49,49 +119,19 @@ export default function AIAgentPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const connectWebSocket = () => {
-    try {
-      wsRef.current = new WebSocket("ws://localhost:3002");
-
-      wsRef.current.onopen = () => {
-        console.log("WebSocket connected");
-        setWsConnected(true);
-      };
-
-      wsRef.current.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          const newMessage: ChatMessage = {
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-            type: data.type,
-            content: data.content,
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, newMessage]);
-          setIsLoading(false);
-        } catch (error) {
-          console.error("Error parsing message:", error);
-        }
-      };
-
-      wsRef.current.onclose = () => {
-        console.log("WebSocket disconnected");
-        setWsConnected(false);
-        setTimeout(connectWebSocket, 3000);
-      };
-
-      wsRef.current.onerror = () => {
-        setWsConnected(false);
-      };
-    } catch (error) {
-      console.error("Failed to connect WebSocket:", error);
-      setWsConnected(false);
-      setTimeout(connectWebSocket, 3000);
-    }
-  };
-
   const sendMessage = () => {
-    if (!inputValue.trim() || isLoading || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+    if (!inputValue.trim() || isLoading || !socketRef.current || !wsConnected) {
+      return;
+    }
+
+    if (limitExceeded) {
+      const errorMsg: ChatMessage = {
+        id: Date.now().toString(),
+        type: "error",
+        content: `今日AI对话次数已用完（${dailyUsage || 0}/${DAILY_LIMIT}），请明天再试`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
       return;
     }
 
@@ -106,10 +146,11 @@ export default function AIAgentPage() {
     setInputValue("");
     setIsLoading(true);
 
-    wsRef.current.send(JSON.stringify({
-      type: "chat",
-      content: inputValue,
-    }));
+    // Emit to Flask WebSocket
+    socketRef.current.emit('ai_chat', {
+      message: inputValue,
+      username: username,
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -120,12 +161,12 @@ export default function AIAgentPage() {
   };
 
   const clearChat = () => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: "clear" }));
-    }
+    setMessages([]);
   };
 
   if (!username) return null;
+
+  const remaining = dailyUsage !== null ? Math.max(0, DAILY_LIMIT - dailyUsage) : DAILY_LIMIT;
 
   return (
     <DashboardLayout
@@ -150,7 +191,16 @@ export default function AIAgentPage() {
               <p className="text-sm text-muted-foreground">基于 DeepSeek 模型驱动</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            {/* Usage Counter */}
+            <div className={"flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm " + (limitExceeded ? "bg-red-500/10 text-red-500" : "bg-accent/50")}>
+              {limitExceeded ? (
+                <AlertCircle className="size-4" />
+              ) : null}
+              <span className={limitExceeded ? "" : "text-muted-foreground"}>
+                剩余次数: <span className={"font-bold " + (remaining <= 3 ? "text-orange-500" : "")}>{remaining}</span> / {DAILY_LIMIT}
+              </span>
+            </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <div className={"size-2 rounded-full " + (wsConnected ? "bg-green-500" : "bg-red-500")} />
               <span>{wsConnected ? "已连接" : "未连接"}</span>
@@ -165,6 +215,18 @@ export default function AIAgentPage() {
           </div>
         </div>
 
+        {/* Limit Warning Banner */}
+        {limitExceeded && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 flex items-center gap-2 text-sm"
+          >
+            <AlertCircle className="size-5 shrink-0" />
+            <span>今日 AI 对话次数已用完（{dailyUsage || 0}/{DAILY_LIMIT}），请明天再来吧</span>
+          </motion.div>
+        )}
+
         {/* Chat Messages */}
         <div className="flex-1 overflow-y-auto bg-card/50 rounded-2xl border border-border/50 p-6 space-y-4 mb-4">
           {messages.length === 0 ? (
@@ -172,6 +234,7 @@ export default function AIAgentPage() {
               <Bot className="size-16 mb-4 opacity-30" />
               <p className="text-lg mb-2">开始和 AI Agent 对话吧</p>
               <p className="text-sm">你可以询问关于设备管理、技术问题等</p>
+              <p className="text-xs mt-4">今日剩余 {remaining} / {DAILY_LIMIT} 次对话</p>
             </div>
           ) : (
             messages.map((msg) => (
@@ -232,22 +295,22 @@ export default function AIAgentPage() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="输入你的问题..."
-              disabled={!wsConnected}
+              placeholder={limitExceeded ? "今日次数已用完，请明天再试" : "输入你的问题..."}
+              disabled={!wsConnected || limitExceeded}
               rows={1}
               className="flex-1 px-4 py-3 rounded-xl bg-accent/50 border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm resize-none disabled:opacity-50"
             />
             <button
               onClick={sendMessage}
-              disabled={!wsConnected || !inputValue.trim() || isLoading}
-              className="size-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center transition-colors disabled:opacity-50"
+              disabled={!wsConnected || !inputValue.trim() || isLoading || limitExceeded}
+              className="size-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send className="size-5" />
             </button>
           </div>
           <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
             <span>按 Enter 发送，Shift + Enter 换行</span>
-            <span>DeepSeek Chat</span>
+            <span>DeepSeek Chat · 剩余 {remaining} 次</span>
           </div>
         </div>
       </motion.div>

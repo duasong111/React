@@ -53,13 +53,24 @@ class HttpClient {
 
     const isExternal = url.startsWith('http://') || url.startsWith('https://');
 
+    // Get auth token from localStorage if available
+    let authToken = '';
+    if (typeof window !== 'undefined') {
+      authToken = localStorage.getItem('auth_token') || '';
+    }
+
     try {
+      const headers: Record<string, string> = {
+        ...API_CONFIG.headers,
+        ...config.headers,
+      };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+
       const response = await fetch(url, {
         method: config.method,
-        headers: {
-          ...API_CONFIG.headers,
-          ...config.headers,
-        },
+        headers,
         body: config.body ? JSON.stringify(config.body) : undefined,
         signal: controller.signal,
         credentials: isExternal ? 'include' : 'same-origin',

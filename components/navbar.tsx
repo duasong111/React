@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Menu, X } from "lucide-react";
+import { Sparkles, Menu, X, Sun, Moon } from "lucide-react";
 
 const navLinks = [
   { label: "功能", href: "#features" },
@@ -14,6 +14,49 @@ const navLinks = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    // Load initial theme
+    const savedSettings = localStorage.getItem("user_settings");
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings);
+        if (parsed.theme === "dark") {
+          setIsDark(true);
+        } else if (parsed.theme === "system") {
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          setIsDark(prefersDark);
+        }
+      } catch {
+        // ignore
+      }
+    } else {
+      // Check system preference
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      setIsDark(prefersDark);
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newIsDark = !isDark;
+    setIsDark(newIsDark);
+
+    // Save to localStorage
+    const savedSettings = localStorage.getItem("user_settings");
+    const settings = savedSettings ? JSON.parse(savedSettings) : {};
+    settings.theme = newIsDark ? "dark" : "light";
+    localStorage.setItem("user_settings", JSON.stringify(settings));
+
+    // Apply theme
+    const root = document.documentElement;
+    root.classList.remove("light", "dark");
+    root.classList.add(newIsDark ? "dark" : "light");
+
+    // Notify other components
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new Event("settings-changed"));
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -37,7 +80,7 @@ export default function Navbar() {
         <a href="#" className="flex items-center gap-2 font-bold text-xl">
           <Sparkles className="size-6 text-primary" />
           <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            NovaSite
+            珈鹰科技
           </span>
         </a>
 
@@ -52,6 +95,26 @@ export default function Navbar() {
               {link.label}
             </a>
           ))}
+
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="relative w-14 h-7 rounded-full bg-primary/20 hover:bg-primary/30 transition-colors overflow-hidden"
+            title={isDark ? "切换到浅色主题" : "切换到深色主题"}
+          >
+            <motion.div
+              animate={{ x: isDark ? 32 : 2 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              className="absolute top-1 w-5 h-5 rounded-full bg-primary shadow-md flex items-center justify-center"
+            >
+              {isDark ? (
+                <Moon className="size-3 text-primary-foreground" />
+              ) : (
+                <Sun className="size-3 text-primary-foreground" />
+              )}
+            </motion.div>
+          </button>
+
           <Button size="sm" asChild>
             <a href="/login">开始使用</a>
           </Button>
@@ -87,6 +150,16 @@ export default function Navbar() {
                   {link.label}
                 </a>
               ))}
+
+              {/* Mobile Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {isDark ? <Moon className="size-4" /> : <Sun className="size-4" />}
+                <span>{isDark ? "深色模式" : "浅色模式"}</span>
+              </button>
+
               <Button size="sm" className="w-fit" asChild>
                 <a href="/login">开始使用</a>
               </Button>

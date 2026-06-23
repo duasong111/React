@@ -2,23 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Sun, Moon, Monitor, Palette, Type, Bell, Shield, Globe, Save, RotateCcw } from "lucide-react";
-
-interface Settings {
-  theme: "light" | "dark" | "system";
-  fontSize: "small" | "medium" | "large";
-  language: "zh-CN" | "en-US";
-  notifications: boolean;
-  compactMode: boolean;
-}
-
-const defaultSettings: Settings = {
-  theme: "system",
-  fontSize: "medium",
-  language: "zh-CN",
-  notifications: true,
-  compactMode: false,
-};
+import { Sun, Moon, Monitor, Palette, Type, Bell, Shield, Globe, Save, RotateCcw, Check } from "lucide-react";
+import { useSettings } from "@/components/providers/ThemeProvider";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -34,66 +21,41 @@ const itemVariants = {
 };
 
 export default function SettingsPanel() {
-  const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const { settings, updateSetting, t } = useSettings();
   const [saved, setSaved] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Load settings from localStorage
-    const savedSettings = localStorage.getItem("user_settings");
-    if (savedSettings) {
-      try {
-        setSettings(JSON.parse(savedSettings));
-      } catch {
-        setSettings(defaultSettings);
-      }
-    }
+    setMounted(true);
   }, []);
 
   const handleSave = () => {
-    localStorage.setItem("user_settings", JSON.stringify(settings));
-
-    // Apply font size
-    document.documentElement.style.fontSize = {
-      small: "14px",
-      medium: "16px",
-      large: "18px",
-    }[settings.fontSize];
-
-    // Apply theme
-    if (settings.theme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else if (settings.theme === "light") {
-      document.documentElement.classList.remove("dark");
-    } else {
-      // System preference
-      if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    }
-
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
   const handleReset = () => {
-    setSettings(defaultSettings);
-    localStorage.removeItem("user_settings");
-    document.documentElement.style.fontSize = "16px";
-    document.documentElement.classList.remove("dark");
+    updateSetting("theme", "system");
+    updateSetting("fontSize", "medium");
+    updateSetting("language", "zh-CN");
+    updateSetting("notifications", true);
+    updateSetting("compactMode", false);
   };
 
-  const updateSetting = <K extends keyof Settings>(key: K, value: Settings[K]) => {
-    setSettings((prev) => ({ ...prev, [key]: value }));
-  };
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
+        <div className="text-muted-foreground">加载中...</div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-8 max-w-3xl"
+      className="space-y-8"
     >
       {/* Header */}
       <motion.div variants={itemVariants} className="flex items-center justify-between">
@@ -117,7 +79,7 @@ export default function SettingsPanel() {
                 : "bg-primary text-primary-foreground hover:bg-primary/90"
             }`}
           >
-            <Save className="size-4" />
+            {saved ? <Check className="size-4" /> : <Save className="size-4" />}
             {saved ? "已保存" : "保存设置"}
           </button>
         </div>
@@ -149,7 +111,7 @@ export default function SettingsPanel() {
             ].map((option) => (
               <button
                 key={option.value}
-                onClick={() => updateSetting("theme", option.value as Settings["theme"])}
+                onClick={() => updateSetting("theme", option.value as "light" | "dark" | "system")}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                   settings.theme === option.value
                     ? "border-primary bg-primary/5"
@@ -166,27 +128,35 @@ export default function SettingsPanel() {
         {/* Font Size */}
         <div className="space-y-3">
           <label className="text-sm font-medium">字体大小</label>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { value: "small", label: "小", size: "12px" },
-              { value: "medium", label: "中", size: "14px" },
-              { value: "large", label: "大", size: "16px" },
-            ].map((option) => (
-              <button
-                key={option.value}
-                onClick={() => updateSetting("fontSize", option.value as Settings["fontSize"])}
-                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                  settings.fontSize === option.value
-                    ? "border-primary bg-primary/5"
-                    : "border-border/50 hover:border-primary/50"
-                }`}
-              >
-                <Type className="size-6" />
-                <span className="text-sm font-medium">{option.label}</span>
-                <span className="text-xs text-muted-foreground">{option.size}</span>
-              </button>
-            ))}
-          </div>
+          <Select
+            value={settings.fontSize}
+            onValueChange={(value) => updateSetting("fontSize", value as "small" | "medium" | "large")}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="选择字体大小" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="small">
+                <div className="flex items-center gap-2">
+                  <Type className="size-4" />
+                  <span>小 (14px)</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="medium">
+                <div className="flex items-center gap-2">
+                  <Type className="size-4" />
+                  <span>中 (16px)</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="large">
+                <div className="flex items-center gap-2">
+                  <Type className="size-4" />
+                  <span>大 (18px)</span>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">当前字体大小预览：<span style={{ fontSize: settings.fontSize === 'small' ? '14px' : settings.fontSize === 'medium' ? '16px' : '18px' }}>这是一段示例文字</span></p>
         </div>
 
         {/* Compact Mode */}
@@ -195,18 +165,10 @@ export default function SettingsPanel() {
             <label className="text-sm font-medium">紧凑模式</label>
             <p className="text-xs text-muted-foreground mt-1">减少界面元素间距，在屏幕上显示更多内容</p>
           </div>
-          <button
-            onClick={() => updateSetting("compactMode", !settings.compactMode)}
-            className={`relative w-12 h-6 rounded-full transition-colors ${
-              settings.compactMode ? "bg-primary" : "bg-accent"
-            }`}
-          >
-            <div
-              className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                settings.compactMode ? "translate-x-7" : "translate-x-1"
-              }`}
-            />
-          </button>
+          <Switch
+            checked={settings.compactMode}
+            onCheckedChange={(checked) => updateSetting("compactMode", checked)}
+          />
         </div>
       </motion.div>
 
@@ -228,24 +190,18 @@ export default function SettingsPanel() {
         {/* Language */}
         <div className="space-y-3">
           <label className="text-sm font-medium">界面语言</label>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { value: "zh-CN", label: "简体中文" },
-              { value: "en-US", label: "English" },
-            ].map((option) => (
-              <button
-                key={option.value}
-                onClick={() => updateSetting("language", option.value as Settings["language"])}
-                className={`p-4 rounded-xl border-2 text-left transition-all ${
-                  settings.language === option.value
-                    ? "border-primary bg-primary/5"
-                    : "border-border/50 hover:border-primary/50"
-                }`}
-              >
-                <span className="text-sm font-medium">{option.label}</span>
-              </button>
-            ))}
-          </div>
+          <Select
+            value={settings.language}
+            onValueChange={(value) => updateSetting("language", value as "zh-CN" | "en-US")}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="选择语言" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="zh-CN">简体中文</SelectItem>
+              <SelectItem value="en-US">English</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Notifications */}
@@ -257,18 +213,10 @@ export default function SettingsPanel() {
               <p className="text-xs text-muted-foreground mt-1">接收系统更新和设备警报通知</p>
             </div>
           </div>
-          <button
-            onClick={() => updateSetting("notifications", !settings.notifications)}
-            className={`relative w-12 h-6 rounded-full transition-colors ${
-              settings.notifications ? "bg-primary" : "bg-accent"
-            }`}
-          >
-            <div
-              className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                settings.notifications ? "translate-x-7" : "translate-x-1"
-              }`}
-            />
-          </button>
+          <Switch
+            checked={settings.notifications}
+            onCheckedChange={(checked) => updateSetting("notifications", checked)}
+          />
         </div>
       </motion.div>
 
@@ -298,7 +246,7 @@ export default function SettingsPanel() {
           </div>
           <div className="flex justify-between py-2">
             <span className="text-muted-foreground">前端框架</span>
-            <span className="font-medium">Next.js 15 + React 19</span>
+            <span className="font-medium">Next.js 16 + React 19</span>
           </div>
         </div>
       </motion.div>
