@@ -31,6 +31,7 @@ const navItems = [
   { icon: Cpu, label: "设备管理", href: "/dashboard/devices", active: false },
   { icon: Zap, label: "便捷操作", href: "/dashboard/operations", active: false },
   { icon: MessageCircle, label: "AI Agent", href: "/dashboard/ai-agent", active: false },
+  { icon: Cpu, label: "设备信息", href: "/dashboard/user-panel", active: false },
   { icon: Settings, label: "系统设置", href: "/dashboard/settings", active: false },
 ];
 
@@ -131,11 +132,11 @@ export default function DashboardLayout({ children, username, avatarFilename, up
         }`}
       >
         <nav className="p-4 space-y-2">
-          {navItems.map((item) => {
+          {navItems.map((item, index) => {
             const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/dashboard");
             return (
               <a
-                key={item.href}
+                key={`${item.href}-${index}`}
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                   isActive
