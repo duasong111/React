@@ -44,6 +44,12 @@ export const API_ENDPOINTS = {
     batchDeploy: ['external', '/api/batch_deploy/'] as const,
     frpUptime: ['external', '/api/device_uptime/'] as const,
     frpConfig: ['external', '/api/frp_config_update/'] as const,
+    n2nConfig: ['external', '/api/n2n_config_update/'] as const,
+    addDuration: ['external', '/api/add_duration/'] as const,
+    queryDuration: ['external', '/api/query_duration/'] as const,
+    deleteDuration: ['external', '/api/delete_duration/'] as const,
+    addFrp: ['external', '/api/add_frp/'] as const,
+    durationStatus: ['external', '/api/duration_status/'] as const,
   },
 } as const;
 

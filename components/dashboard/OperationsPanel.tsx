@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Server, Upload, CheckCircle, XCircle, Loader2, Terminal, Zap } from "lucide-react";
+import { Server, Upload, CheckCircle, XCircle, Loader2, Terminal, Zap, Globe, Clock, Power } from "lucide-react";
 import { API_ENDPOINTS } from "@/lib/api/config";
 import { http } from "@/lib/api/http";
 
@@ -41,6 +41,29 @@ export default function OperationsPanel() {
     fail_count: number;
     results: BatchDeployResult[];
   } | null>(null);
+
+  // FRP deploy state
+  const [frpIp, setFrpIp] = useState("");
+  const [frpPassword, setFrpPassword] = useState("");
+  const [frpDeviceName, setFrpDeviceName] = useState("");
+  const [frpLoading, setFrpLoading] = useState(false);
+  const [frpResult, setFrpResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Duration deploy state
+  const [durationIp, setDurationIp] = useState("");
+  const [durationPassword, setDurationPassword] = useState("");
+  const [durationSn, setDurationSn] = useState("");
+  const [durationUseFrp, setDurationUseFrp] = useState(false);
+  const [durationLoading, setDurationLoading] = useState(false);
+  const [durationResult, setDurationResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Duration status state
+  const [statusIp, setStatusIp] = useState("");
+  const [statusPassword, setStatusPassword] = useState("");
+  const [statusEnable, setStatusEnable] = useState(true);
+  const [statusUseFrp, setStatusUseFrp] = useState(false);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [statusResult, setStatusResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const handleAddLicense = async () => {
     if (!deviceIp || !password) return;
@@ -97,6 +120,74 @@ export default function OperationsPanel() {
       });
     } finally {
       setBatchLoading(false);
+    }
+  };
+
+  const handleAddFrp = async () => {
+    if (!frpIp || !frpPassword || !frpDeviceName) return;
+    setFrpLoading(true);
+    setFrpResult(null);
+    try {
+      const result = await http.post(API_ENDPOINTS.operations.addFrp, {
+        ip: frpIp,
+        password: frpPassword,
+        device_name: frpDeviceName,
+      });
+      const responseData = (result.data as any);
+      setFrpResult({
+        success: result.success,
+        message: responseData?.message || result.error || "操作完成",
+      });
+    } catch (err) {
+      setFrpResult({ success: false, message: "请求失败" });
+    } finally {
+      setFrpLoading(false);
+    }
+  };
+
+  const handleAddDuration = async () => {
+    if (!durationIp || !durationPassword || !durationSn) return;
+    setDurationLoading(true);
+    setDurationResult(null);
+    try {
+      const result = await http.post(API_ENDPOINTS.operations.addDuration, {
+        ip: durationIp,
+        password: durationPassword,
+        device_sn: durationSn,
+        use_frp: durationUseFrp,
+      });
+      const responseData = (result.data as any);
+      setDurationResult({
+        success: result.success,
+        message: responseData?.message || result.error || "操作完成",
+      });
+    } catch (err) {
+      setDurationResult({ success: false, message: "请求失败" });
+    } finally {
+      setDurationLoading(false);
+    }
+  };
+
+  const handleDurationStatus = async (enable: boolean) => {
+    if (!statusIp || !statusPassword) return;
+    setStatusLoading(true);
+    setStatusResult(null);
+    try {
+      const result = await http.post(API_ENDPOINTS.operations.durationStatus, {
+        ip: statusIp,
+        password: statusPassword,
+        enable,
+        use_frp: statusUseFrp,
+      });
+      const responseData = (result.data as any);
+      setStatusResult({
+        success: result.success,
+        message: responseData?.message || result.error || "操作完成",
+      });
+    } catch (err) {
+      setStatusResult({ success: false, message: "请求失败" });
+    } finally {
+      setStatusLoading(false);
     }
   };
 
@@ -268,6 +359,297 @@ export default function OperationsPanel() {
                       <span className="text-muted-foreground truncate">{r.detail}</span>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Deploy FRP Client */}
+        <motion.div
+          variants={itemVariants}
+          className="rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 p-6"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+              <Globe className="size-5 text-emerald-500" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold">部署 FRP 客户端</h2>
+              <p className="text-sm text-muted-foreground">为远程设备部署 FRP 客户端服务</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">设备 IP 地址</label>
+              <input
+                type="text"
+                value={frpIp}
+                onChange={(e) => setFrpIp(e.target.value)}
+                placeholder="例如: 192.168.1.100"
+                className="w-full h-10 px-4 rounded-lg bg-accent/50 border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Root 密码</label>
+              <input
+                type="password"
+                value={frpPassword}
+                onChange={(e) => setFrpPassword(e.target.value)}
+                placeholder="请输入密码"
+                className="w-full h-10 px-4 rounded-lg bg-accent/50 border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">设备名称（FRP 代理标识）</label>
+              <input
+                type="text"
+                value={frpDeviceName}
+                onChange={(e) => setFrpDeviceName(e.target.value)}
+                placeholder="例如: jy.JY_001"
+                className="w-full h-10 px-4 rounded-lg bg-accent/50 border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+              />
+            </div>
+            <button
+              onClick={handleAddFrp}
+              disabled={frpLoading || !frpIp || !frpPassword || !frpDeviceName}
+              className="w-full flex items-center justify-center gap-2 h-11 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-medium transition-colors disabled:opacity-50"
+            >
+              {frpLoading ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  部署中...
+                </>
+              ) : (
+                <>
+                  <Upload className="size-4" />
+                  部署 FRP 客户端
+                </>
+              )}
+            </button>
+
+            {frpResult && (
+              <div
+                className={`p-4 rounded-lg flex items-start gap-3 ${
+                  frpResult.success
+                    ? "bg-green-500/10 text-green-500"
+                    : "bg-red-500/10 text-red-500"
+                }`}
+              >
+                {frpResult.success ? (
+                  <CheckCircle className="size-5 shrink-0 mt-0.5" />
+                ) : (
+                  <XCircle className="size-5 shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <p className="font-medium text-sm">
+                    {frpResult.success ? "部署成功" : "部署失败"}
+                  </p>
+                  <p className="text-xs mt-1 opacity-80">{frpResult.message}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Deploy Duration Service */}
+        <motion.div
+          variants={itemVariants}
+          className="rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 p-6"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <div className="size-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+              <Clock className="size-5 text-amber-500" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold">部署运行时长服务</h2>
+              <p className="text-sm text-muted-foreground">为远程设备部署运行时长上报服务并设为开机自启</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">设备 IP 地址或FRP</label>
+              <input
+                type="text"
+                value={durationIp}
+                onChange={(e) => setDurationIp(e.target.value)}
+                placeholder="例如: 192.168.1.100"
+                className="w-full h-10 px-4 rounded-lg bg-accent/50 border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Root 密码</label>
+              <input
+                type="password"
+                value={durationPassword}
+                onChange={(e) => setDurationPassword(e.target.value)}
+                placeholder="请输入密码"
+                className="w-full h-10 px-4 rounded-lg bg-accent/50 border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">设备序列号</label>
+              <input
+                type="text"
+                value={durationSn}
+                onChange={(e) => setDurationSn(e.target.value)}
+                placeholder="例如: YA_GY_3"
+                className="w-full h-10 px-4 rounded-lg bg-accent/50 border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                id="durationUseFrp"
+                type="checkbox"
+                checked={durationUseFrp}
+                onChange={(e) => setDurationUseFrp(e.target.checked)}
+                className="size-4 rounded border-border/50 accent-amber-500"
+              />
+              <label htmlFor="durationUseFrp" className="text-sm text-muted-foreground">
+                通过 FRP 代理连接设备
+              </label>
+            </div>
+            <button
+              onClick={handleAddDuration}
+              disabled={durationLoading || !durationIp || !durationPassword || !durationSn}
+              className="w-full flex items-center justify-center gap-2 h-11 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-medium transition-colors disabled:opacity-50"
+            >
+              {durationLoading ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  部署中...
+                </>
+              ) : (
+                <>
+                  <Upload className="size-4" />
+                  部署运行时长服务
+                </>
+              )}
+            </button>
+
+            {durationResult && (
+              <div
+                className={`p-4 rounded-lg flex items-start gap-3 ${
+                  durationResult.success
+                    ? "bg-green-500/10 text-green-500"
+                    : "bg-red-500/10 text-red-500"
+                }`}
+              >
+                {durationResult.success ? (
+                  <CheckCircle className="size-5 shrink-0 mt-0.5" />
+                ) : (
+                  <XCircle className="size-5 shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <p className="font-medium text-sm">
+                    {durationResult.success ? "部署成功" : "部署失败"}
+                  </p>
+                  <p className="text-xs mt-1 opacity-80">{durationResult.message}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Duration Status Control */}
+        <motion.div
+          variants={itemVariants}
+          className="rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 p-6"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <div className="size-10 rounded-xl bg-rose-500/10 flex items-center justify-center">
+              <Power className="size-5 text-rose-500" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold">控制运行时长服务</h2>
+              <p className="text-sm text-muted-foreground">启用或禁用远程设备 duration_time 服务</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">设备 IP 地址</label>
+              <input
+                type="text"
+                value={statusIp}
+                onChange={(e) => setStatusIp(e.target.value)}
+                placeholder="例如: 192.168.1.100"
+                className="w-full h-10 px-4 rounded-lg bg-accent/50 border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Root 密码</label>
+              <input
+                type="password"
+                value={statusPassword}
+                onChange={(e) => setStatusPassword(e.target.value)}
+                placeholder="请输入密码"
+                className="w-full h-10 px-4 rounded-lg bg-accent/50 border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                id="statusUseFrp"
+                type="checkbox"
+                checked={statusUseFrp}
+                onChange={(e) => setStatusUseFrp(e.target.checked)}
+                className="size-4 rounded border-border/50 accent-rose-500"
+              />
+              <label htmlFor="statusUseFrp" className="text-sm text-muted-foreground">
+                通过 FRP 代理连接设备
+              </label>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleDurationStatus(true)}
+                disabled={statusLoading || !statusIp || !statusPassword}
+                className="flex-1 flex items-center justify-center gap-2 h-11 rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium transition-colors disabled:opacity-50"
+              >
+                {statusLoading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <>
+                    <CheckCircle className="size-4" />
+                    启用开机自启
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => handleDurationStatus(false)}
+                disabled={statusLoading || !statusIp || !statusPassword}
+                className="flex-1 flex items-center justify-center gap-2 h-11 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium transition-colors disabled:opacity-50"
+              >
+                {statusLoading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <>
+                    <XCircle className="size-4" />
+                    禁用开机自启
+                  </>
+                )}
+              </button>
+            </div>
+
+            {statusResult && (
+              <div
+                className={`p-4 rounded-lg flex items-start gap-3 ${
+                  statusResult.success
+                    ? "bg-green-500/10 text-green-500"
+                    : "bg-red-500/10 text-red-500"
+                }`}
+              >
+                {statusResult.success ? (
+                  <CheckCircle className="size-5 shrink-0 mt-0.5" />
+                ) : (
+                  <XCircle className="size-5 shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <p className="font-medium text-sm">
+                    {statusResult.success ? "操作成功" : "操作失败"}
+                  </p>
+                  <p className="text-xs mt-1 opacity-80">{statusResult.message}</p>
                 </div>
               </div>
             )}
