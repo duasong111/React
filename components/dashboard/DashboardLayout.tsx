@@ -74,7 +74,7 @@ export default function DashboardLayout({ children, username, avatarFilename, up
               <div className="size-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
                 <Cpu className="size-4 text-primary-foreground" />
               </div>
-              <span className="font-bold text-lg">DeviceHub</span>
+              <span className="font-bold text-lg">设备管理中心</span>
             </div>
           </div>
 
